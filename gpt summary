@@ -1,0 +1,51 @@
+Mini-MCU Project Roadmap
+──────────────────────────────
+[Login / Authentication]
+       │
+       ▼
+[Nurse Interface] ───────────────┐
+│                              │
+│ Tab 1: Input Data            │
+│  - Employee select           │
+│  - Manual input              │
+│  - Confirm button (lock/unlock) 
+│  - Draft system              │
+│  - Auto age & BMI            │
+│  - Field validations         │
+│                              │
+│ Tab 2: Riwayat Check-Up      │
+│  - History table             │
+│  - Timeline chart (Well/Unwell)
+│  - Bar chart summary         │
+│  - Filter by month/year      │
+│  - Graphs visible even if 0 │
+│                              │
+└─────────────────────────────┘
+
+[Manager Interface] (existing)
+│ - Dashboard of all employees
+│ - Filters by lokasi, month, year
+│ - Summary charts
+│ - CSV/Excel download
+
+[Database]
+│ - Employees table
+│ - Checkups table
+│ - Users table
+│ - Queries.py patched for:
+│   • Missing fields fallback
+│   • PostgreSQL & SQLite
+│   • User CRUD
+│
+[Dummy Data / Testing]
+│ - 10 dummy employees
+│ - 3 unwell
+│ - 3 checkups each
+│ - `scripts/seed_dummy_data.py` for fast testing
+
+[Next Steps / Future Features]
+│ - Optional insert employees automatically
+│ - Full nurse interface testing
+│ - Deploy to server (DigitalOcean)
+│ - Add authentication
+│ - Optional: export nurse history to CSV
