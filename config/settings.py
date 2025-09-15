@@ -1,5 +1,9 @@
 # config/settings.py
-import streamlit as st
+import os
+from dotenv import load_dotenv
+
+# --- Load .env file ---
+load_dotenv("supa.env")
 
 # --- App UI Titles ---
 APP_TITLE = "🏥 Mini MCU Web App"
@@ -9,19 +13,10 @@ SIDEBAR_TITLE = "🔑 Login"
 DB_FILE = "med_check.db"  # fallback SQLite (optional)
 USE_POSTGRES = True       # True to use Supabase/Postgres, False for local SQLite
 
-# --- Build Postgres URL from Streamlit secrets ---
-# Make sure your secrets.toml has a [postgres] block:
-# [postgres]
-# host = "db.iqcrkohssyqoggjuwsoh.supabase.co"
-# port = "5432"
-# database = "postgres"
-# username = "postgres"
-# password = "HvKt5mtxWsjmaNPA"
-
-postgres = st.secrets["postgres"]
+# --- Build Postgres URL from environment variables ---
 POSTGRES_URL = (
-    f"postgresql://{postgres['username']}:{postgres['password']}"
-    f"@{postgres['host']}:{postgres['port']}/{postgres['database']}?sslmode=require"
+    f"postgresql://{os.getenv('USER')}:{os.getenv('PASSWORD')}"
+    f"@{os.getenv('HOST')}:{os.getenv('PORT')}/{os.getenv('DBNAME')}?sslmode=require"
 )
 
 # --- Default users (used if DB has no users) ---

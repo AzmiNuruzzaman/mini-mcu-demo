@@ -1,17 +1,23 @@
 # db/database.py
 import bcrypt
-import streamlit as st
 from sqlalchemy import create_engine, text
 from config.settings import DEFAULT_USERS
+from dotenv import load_dotenv
+import os
+
+# --- Load .env ---
+load_dotenv(dotenv_path="supa.env")
 
 # --- Connection helper ---
 def get_engine():
-    """Return SQLAlchemy engine for Supabase PostgreSQL using Streamlit secrets."""
-    s = st.secrets["postgres"]
-    db_url = (
-        f"postgresql://{s['username']}:{s['password']}"
-        f"@{s['host']}:{s['port']}/{s['database']}?sslmode=require"
-    )
+    """Return SQLAlchemy engine for Supabase PostgreSQL using .env."""
+    user = os.getenv("USER")
+    password = os.getenv("PASSWORD")
+    host = os.getenv("HOST")
+    port = os.getenv("PORT")
+    dbname = os.getenv("DBNAME")
+    
+    db_url = f"postgresql://{user}:{password}@{host}:{port}/{dbname}?sslmode=require"
     return create_engine(db_url)
 
 # --- Initialize DB ---

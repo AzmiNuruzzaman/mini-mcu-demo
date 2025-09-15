@@ -4,16 +4,21 @@ import bcrypt
 import uuid
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
-import streamlit as st
 from utils.helpers import calculate_age
+from dotenv import load_dotenv
+import os
+
+# --- Load .env ---
+load_dotenv(dotenv_path="supa.env")
 
 # --- Config ---
-# Use Streamlit secrets to configure database connection
-secrets = st.secrets["postgres"]
-DATABASE_URL = (
-    f"postgresql://{secrets['username']}:{secrets['password']}"
-    f"@{secrets['host']}:{secrets['port']}/{secrets['database']}?sslmode=require"
-)
+USER = os.getenv("USER")
+PASSWORD = os.getenv("PASSWORD")
+HOST = os.getenv("HOST")
+PORT = os.getenv("PORT")
+DBNAME = os.getenv("DBNAME")
+
+DATABASE_URL = f"postgresql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
 ENGINE = create_engine(DATABASE_URL)
 
 # --- Expected schema for checkups table ---
