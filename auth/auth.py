@@ -5,6 +5,10 @@ from db.database import init_db
 from db.queries import get_user_by_username
 from config.settings import SIDEBAR_TITLE
 
+import streamlit as st
+st.write("DB USER:", st.secrets.get("USER"))
+st.write("DB HOST:", st.secrets.get("HOST"))
+
 # --- Initialize DB ---
 init_db()
 
