@@ -1,7 +1,6 @@
-streamlit==1.37.0
-pandas==2.2.2
-bcrypt==4.2.0
-xlsxwriter==3.2.0
-sqlalchemy>=2.0.20
-psycopg2-binary>=2.9.0
-
+streamlit
+sqlalchemy
+pandas
+bcrypt
+psycopg2-binary
+python-dotenv
