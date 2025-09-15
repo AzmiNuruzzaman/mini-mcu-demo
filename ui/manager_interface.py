@@ -277,25 +277,32 @@ def manager_interface(current_employee_uid=None):
                 st.error(f"❌ Error saat meng-upload file: {e}")
 
     # ---------------- Tab 6: Data Management ----------------
+    # ---------------- Tab 6: Data Management ----------------
     with tab6:
         st.subheader("🗂️ Data Management – Riwayat Upload Master Karyawan")
 
         from db.queries import get_upload_history, delete_batch
+        import sqlalchemy
 
-        history_df = get_upload_history()
-        if history_df.empty:
-            st.info("Belum ada riwayat upload master karyawan.")
-        else:
-            st.dataframe(history_df, use_container_width=True)
+        try:
+            history_df = get_upload_history()
+            if history_df.empty:
+                st.info("Belum ada riwayat upload master karyawan.")
+            else:
+                st.dataframe(history_df, use_container_width=True)
 
-            batch_to_delete = st.selectbox(
-                "Pilih Batch untuk dihapus",
-                options=history_df["upload_batch_id"]
-            )
-            if st.button("🗑️ Hapus Batch Terpilih"):
-                try:
-                    delete_batch(batch_to_delete)
-                    st.success("✅ Batch berhasil dihapus.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Gagal menghapus batch: {e}")
+                batch_to_delete = st.selectbox(
+                    "Pilih Batch untuk dihapus",
+                    options=history_df["upload_batch_id"]
+                )
+                if st.button("🗑️ Hapus Batch Terpilih"):
+                    try:
+                        delete_batch(batch_to_delete)
+                        st.success("✅ Batch berhasil dihapus.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Gagal menghapus batch: {e}")
+
+        except sqlalchemy.exc.ProgrammingError:
+            st.warning("⚠️ Tabel riwayat upload belum dibuat. Silakan upload master karyawan terlebih dahulu.")
+
