@@ -4,20 +4,21 @@ from sqlalchemy import create_engine, text
 from config.settings import DEFAULT_USERS
 from dotenv import load_dotenv
 import os
+import streamlit as st
 
-# --- Load .env ---
+# --- Load local .env (for local development) ---
 load_dotenv(dotenv_path="supa.env")
 
 # --- Connection helper ---
 def get_engine():
-    """Return SQLAlchemy engine for Supabase PostgreSQL using .env."""
-    user = os.getenv("USER")
-    password = os.getenv("PASSWORD")
-    host = os.getenv("HOST")
-    port = os.getenv("PORT")
-    dbname = os.getenv("DBNAME")
-    
-    db_url = f"postgresql://{user}:{password}@{host}:{port}/{dbname}?sslmode=require"
+    """Return SQLAlchemy engine for Supabase PostgreSQL using .env or Streamlit secrets."""
+    user = os.getenv("USER") or st.secrets["USER"]
+    password = os.getenv("PASSWORD") or st.secrets["PASSWORD"]
+    host = os.getenv("HOST") or st.secrets["HOST"]
+    port = os.getenv("PORT") or st.secrets["PORT"]
+    dbname = os.getenv("DBNAME") or st.secrets["DBNAME"]
+
+    db_url = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}?sslmode=require"
     return create_engine(db_url)
 
 # --- Initialize DB ---

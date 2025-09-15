@@ -9,6 +9,17 @@ from ui.master_interface import master_interface  # ✅ added Master interface
 from config.settings import APP_TITLE
 from app_router import handle_qr_landing  # ✅ no changes needed
 
+# --- Patch: load Streamlit secrets fallback for database (no code changes needed elsewhere) ---
+import os
+from dotenv import load_dotenv
+
+# Load local .env for local development
+load_dotenv(dotenv_path="supa.env")
+
+# Now os.getenv() will fallback to st.secrets if env not found
+# (This is already handled in database.py get_engine)
+# No further changes needed here
+
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 
 def main():
