@@ -21,6 +21,7 @@ POSTGRES_URL = (
 
 # --- Default users (used if DB has no users) ---
 DEFAULT_USERS = [
+    ("master", "master123", "Master"),
     ("manager", "manager123", "Manager"),
     ("nurse", "nurse123", "Tenaga Kesehatan"),
     ("karyawan1", "karyawan123", "Karyawan"),
