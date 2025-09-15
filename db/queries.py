@@ -4,11 +4,17 @@ import bcrypt
 import uuid
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
-from config.settings import POSTGRES_URL
+import streamlit as st
 from utils.helpers import calculate_age
 
 # --- Config ---
-ENGINE = create_engine(POSTGRES_URL)
+# Use Streamlit secrets to configure database connection
+secrets = st.secrets["postgres"]
+DATABASE_URL = (
+    f"postgresql://{secrets['username']}:{secrets['password']}"
+    f"@{secrets['host']}:{secrets['port']}/{secrets['database']}?sslmode=require"
+)
+ENGINE = create_engine(DATABASE_URL)
 
 # --- Expected schema for checkups table ---
 CHECKUP_COLUMNS = [
@@ -23,7 +29,6 @@ def get_engine():
 
 # --- Karyawan ---
 def get_employees():
-    """Fetch all karyawan (basic info for selector)."""
     query = """
         SELECT uid, username AS nama, jabatan, lokasi, tanggal_lahir
         FROM karyawan
@@ -32,7 +37,6 @@ def get_employees():
     return pd.read_sql(query, get_engine())
 
 def get_employee_by_uid(uid):
-    """Fetch detailed karyawan info by uid."""
     with get_engine().connect() as conn:
         result = conn.execute(
             text(
@@ -44,10 +48,6 @@ def get_employee_by_uid(uid):
     return dict(result._mapping) if result else None
 
 def add_employee_if_missing(username, jabatan, lokasi, tanggal_lahir=None, upload_batch_id=None):
-    """
-    Insert a new karyawan if not exists, return uid.
-    Now also stores uploaded_at (NOW()) and upload_batch_id for history tracking.
-    """
     with get_engine().begin() as conn:
         existing = conn.execute(
             text(
@@ -79,10 +79,6 @@ def add_employee_if_missing(username, jabatan, lokasi, tanggal_lahir=None, uploa
 
 # --- Checkups ---
 def load_checkups():
-    """
-    Load all checkup records with numeric columns rounded to 2 decimals.
-    UID is the single source of truth; checkup_id removed.
-    """
     query = """
         SELECT
             c.uid,
@@ -106,7 +102,6 @@ def load_checkups():
     return pd.read_sql(query, get_engine())
 
 def save_checkups(df):
-    """Save dataframe to checkups table after validation."""
     missing_cols = [col for col in CHECKUP_COLUMNS if col not in df.columns]
     if missing_cols:
         raise ValueError(f"Missing required columns: {missing_cols}")
@@ -117,14 +112,6 @@ def save_checkups(df):
         raise e
 
 def save_uploaded_checkups(df):
-    """
-    Process uploaded XLS/CSV (nurse or manager):
-    - Assign UID automatically if missing
-    - Parse tanggal_lahir safely
-    - Calculate umur
-    - Round numeric columns
-    - Save checkups
-    """
     required_cols = ["nama", "jabatan", "lokasi", "tanggal",
                      "tanggal_lahir", "tinggi", "berat", "lingkar_perut",
                      "bmi", "gestational_diabetes", "cholesterol", "asam_urat"]
@@ -132,20 +119,15 @@ def save_uploaded_checkups(df):
     if missing_cols:
         raise ValueError(f"Missing required columns in uploaded file: {missing_cols}")
 
-    # --- Parse dates ---
     df["tanggal"] = pd.to_datetime(df["tanggal"], errors="coerce").dt.date
     df["tanggal_lahir"] = pd.to_datetime(df["tanggal_lahir"], errors="coerce").dt.date
-
-    # --- Calculate umur ---
     df["umur"] = df["tanggal_lahir"].apply(lambda d: calculate_age(d) if pd.notnull(d) else 0)
 
-    # --- Round numeric columns ---
     numeric_cols = ["tinggi", "berat", "lingkar_perut", "bmi",
                     "gestational_diabetes", "cholesterol", "asam_urat"]
     for col in numeric_cols:
         df[col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0).round(2)
 
-    # --- Assign uid safely with a new batch id ---
     batch_id = str(uuid.uuid4())
     uids = []
     for _, row in df.iterrows():
@@ -156,20 +138,15 @@ def save_uploaded_checkups(df):
         uids.append(uid)
     df["uid"] = uids
 
-    # --- Reorder columns for DB ---
     df_to_save = df[CHECKUP_COLUMNS].copy()
-
-    # --- Save to DB ---
     save_checkups(df_to_save)
 
 # --- Users ---
 def get_users():
-    """Return all users with username and role."""
     query = "SELECT username, role FROM users"
     return pd.read_sql(query, get_engine())
 
 def get_user_by_username(username):
-    """Fetch a user row by username."""
     with get_engine().connect() as conn:
         result = conn.execute(
             text("SELECT username, password, role FROM users WHERE username = :username"),
@@ -178,7 +155,6 @@ def get_user_by_username(username):
     return dict(result._mapping) if result else None
 
 def add_user(username, password, role):
-    """Add a new user (manager/nurse/karyawan) with hashed password."""
     hashed_pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode("utf-8")
     with get_engine().begin() as conn:
         conn.execute(
@@ -186,14 +162,12 @@ def add_user(username, password, role):
             {"u": username, "p": hashed_pw, "r": role}
         )
 
-# --- Master User Functions (NEW) ---
+# --- Master User Functions ---
 def delete_user(username: str):
-    """Delete a user by username."""
     with get_engine().begin() as conn:
         conn.execute(text("DELETE FROM users WHERE username = :username"), {"username": username})
 
 def reset_user_password(username: str, new_password: str):
-    """Reset a user's password."""
     hashed_pw = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode("utf-8")
     with get_engine().begin() as conn:
         conn.execute(
@@ -202,7 +176,6 @@ def reset_user_password(username: str, new_password: str):
         )
 
 def count_users_by_role(role: str) -> int:
-    """Return number of active users by role."""
     with get_engine().connect() as conn:
         result = conn.execute(
             text("SELECT COUNT(*) FROM users WHERE role = :role"),
@@ -212,19 +185,9 @@ def count_users_by_role(role: str) -> int:
 
 # --- Master Karyawan Upload ---
 def save_uploaded_karyawan(df: pd.DataFrame) -> None:
-    """
-    Save manager-uploaded master karyawan records into the karyawan table.
-    Expected columns: nama, jabatan, lokasi, [tanggal_lahir optional].
-
-    • If a record with the same username exists, update
-      jabatan/lokasi/tanggal_lahir.
-    • Otherwise insert a new row with a fresh UID and mark uploaded_at + batch.
-    """
     if df.empty:
         return
-
-    batch_id = str(uuid.uuid4())  # one batch id for this upload
-
+    batch_id = str(uuid.uuid4())
     with get_engine().begin() as conn:
         for _, row in df.iterrows():
             username = row.get("nama")
@@ -232,18 +195,11 @@ def save_uploaded_karyawan(df: pd.DataFrame) -> None:
             lokasi  = row.get("lokasi")
             tanggal_lahir = pd.to_datetime(row.get("tanggal_lahir"), errors="coerce")
             tanggal_lahir = tanggal_lahir.date() if pd.notnull(tanggal_lahir) else None
-
-            # Check existing
             result = conn.execute(
-                text("""
-                    SELECT uid FROM karyawan
-                    WHERE username = :username
-                """),
+                text("SELECT uid FROM karyawan WHERE username = :username"),
                 {"username": username}
             ).fetchone()
-
             if result:
-                # Update existing record
                 conn.execute(
                     text("""
                         UPDATE karyawan
@@ -252,15 +208,9 @@ def save_uploaded_karyawan(df: pd.DataFrame) -> None:
                             tanggal_lahir = :dob
                         WHERE uid = :uid
                     """),
-                    {
-                        "jabatan": jabatan,
-                        "lokasi": lokasi,
-                        "dob": tanggal_lahir,
-                        "uid": result._mapping["uid"],
-                    },
+                    {"jabatan": jabatan, "lokasi": lokasi, "dob": tanggal_lahir, "uid": result._mapping["uid"]},
                 )
             else:
-                # Insert new record with fresh UID, plus uploaded_at + batch
                 new_uid = str(uuid.uuid4())
                 conn.execute(
                     text("""
@@ -268,32 +218,18 @@ def save_uploaded_karyawan(df: pd.DataFrame) -> None:
                                               tanggal_lahir, uploaded_at, upload_batch_id)
                         VALUES (:uid, :username, :jabatan, :lokasi, :dob, NOW(), :batch)
                     """),
-                    {
-                        "uid": new_uid,
-                        "username": username,
-                        "jabatan": jabatan,
-                        "lokasi": lokasi,
-                        "dob": tanggal_lahir,
-                        "batch": batch_id,
-                    },
+                    {"uid": new_uid, "username": username, "jabatan": jabatan,
+                     "lokasi": lokasi, "dob": tanggal_lahir, "batch": batch_id},
                 )
 
 # --- Karyawan Count ---
 def get_total_karyawan() -> int:
-    """
-    Return total number of karyawan rows (unique employees),
-    including those uploaded by the manager even if they have
-    no medical checkup yet.
-    """
     with get_engine().connect() as conn:
         result = conn.execute(text("SELECT COUNT(*) FROM karyawan")).scalar()
     return result or 0
 
 # --- Upload History Helpers ---
 def get_upload_history() -> pd.DataFrame:
-    """
-    Return a list of past manager uploads with batch id, uploaded_at and count.
-    """
     query = """
         SELECT
             upload_batch_id,
@@ -307,32 +243,22 @@ def get_upload_history() -> pd.DataFrame:
     return pd.read_sql(query, get_engine())
 
 def delete_batch(batch_id: str) -> None:
-    """
-    Delete all karyawan rows that belong to the given upload_batch_id.
-    """
     with get_engine().begin() as conn:
-        conn.execute(
-            text("DELETE FROM karyawan WHERE upload_batch_id = :bid"),
-            {"bid": batch_id}
-        )
+        conn.execute(text("DELETE FROM karyawan WHERE upload_batch_id = :bid"), {"bid": batch_id})
 
-# --- Master Delete Helpers (NEW) ---
+# --- Master Delete Helpers ---
 def delete_employee_by_uid(uid: str):
-    """Delete a single karyawan by UID."""
     with get_engine().begin() as conn:
         conn.execute(text("DELETE FROM karyawan WHERE uid = :uid"), {"uid": uid})
 
 def delete_all_employees():
-    """Delete all karyawan rows."""
     with get_engine().begin() as conn:
         conn.execute(text("DELETE FROM karyawan"))
 
 def delete_checkup_by_id(checkup_id: int):
-    """Delete a single checkup by ID."""
     with get_engine().begin() as conn:
         conn.execute(text("DELETE FROM checkups WHERE id = :id"), {"id": checkup_id})
 
 def delete_all_checkups():
-    """Delete all checkups."""
     with get_engine().begin() as conn:
         conn.execute(text("DELETE FROM checkups"))

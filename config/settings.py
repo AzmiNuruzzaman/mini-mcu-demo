@@ -1,33 +1,36 @@
 # config/settings.py
-import os
 import streamlit as st
 
+# --- App UI Titles ---
 APP_TITLE = "🏥 Mini MCU Web App"
 SIDEBAR_TITLE = "🔑 Login"
 
-# --- Database configuration -----------------------------------------------
+# --- Database configuration ---
+DB_FILE = "med_check.db"  # fallback SQLite (optional)
+USE_POSTGRES = True       # True to use Supabase/Postgres, False for local SQLite
 
-# Fallback SQLite for quick local testing (optional)
-DB_FILE = "med_check.db"
+# --- Build Postgres URL from Streamlit secrets ---
+# Make sure your secrets.toml has a [postgres] block:
+# [postgres]
+# host = "db.iqcrkohssyqoggjuwsoh.supabase.co"
+# port = "5432"
+# database = "postgres"
+# username = "postgres"
+# password = "HvKt5mtxWsjmaNPA"
 
-# Flag to choose backend
-USE_POSTGRES = True  # Set False if you want local SQLite
-
-# Pull Postgres URL from Streamlit Secrets first, then environment variable,
-# finally fallback to the hard-coded local default (for dev only).
+postgres = st.secrets["postgres"]
 POSTGRES_URL = (
-    st.secrets.get("POSTGRES_URL")
-    or os.getenv("POSTGRES_URL")
-    or "postgresql+psycopg2://mini_mcu_user:new_password@localhost:5432/mini_mcu"
+    f"postgresql://{postgres['username']}:{postgres['password']}"
+    f"@{postgres['host']}:{postgres['port']}/{postgres['database']}?sslmode=require"
 )
 
-# --- Default users (used if DB has no users) --------------------------------
+# --- Default users (used if DB has no users) ---
 DEFAULT_USERS = [
     ("manager", "manager123", "Manager"),
     ("nurse", "nurse123", "Tenaga Kesehatan"),
     ("karyawan1", "karyawan123", "Karyawan"),
 ]
 
-# --- File export configs ----------------------------------------------------
+# --- File export configs ---
 CSV_FILENAME = "medical_checkup_data.csv"
 EXCEL_FILENAME = "medical_checkup_data.xlsx"
