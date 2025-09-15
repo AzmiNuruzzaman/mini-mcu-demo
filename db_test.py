@@ -3,14 +3,17 @@ import streamlit as st
 import socket
 import psycopg2
 
-# --- Load secrets ---
+st.title("Supabase DB Test")
+
+# --- Load secrets from Streamlit ---
 user = st.secrets["USER"]
 password = st.secrets["PASSWORD"]
 host = st.secrets["HOST"]
 port = st.secrets["PORT"]
 dbname = st.secrets["DBNAME"]
 
-st.write("Testing database connection...")
+st.write(f"DB USER: {user}")
+st.write(f"DB HOST: {host}")
 
 # --- 1️⃣ Test hostname resolution ---
 try:
