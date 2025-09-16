@@ -5,18 +5,14 @@ import uuid
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from utils.helpers import calculate_age
-from dotenv import load_dotenv
-import os
+import streamlit as st
 
-# --- Load .env ---
-load_dotenv(dotenv_path="supa.env")
-
-# --- Config ---
-USER = os.getenv("USER")
-PASSWORD = os.getenv("PASSWORD")
-HOST = os.getenv("HOST")
-PORT = os.getenv("PORT")
-DBNAME = os.getenv("DBNAME")
+# --- Config (patched to use Streamlit secrets) ---
+USER = st.secrets["USER"]
+PASSWORD = st.secrets["PASSWORD"]
+HOST = st.secrets["HOST"]
+PORT = st.secrets["PORT"]
+DBNAME = st.secrets["DBNAME"]
 
 DATABASE_URL = f"postgresql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
 ENGINE = create_engine(DATABASE_URL)
