@@ -277,7 +277,6 @@ def manager_interface(current_employee_uid=None):
                 st.error(f"❌ Error saat meng-upload file: {e}")
 
     # ---------------- Tab 6: Data Management ----------------
-    # ---------------- Tab 6: Data Management ----------------
     with tab6:
         st.subheader("🗂️ Data Management – Riwayat Upload Master Karyawan")
 
@@ -297,6 +296,7 @@ def manager_interface(current_employee_uid=None):
                 )
                 if st.button("🗑️ Hapus Batch Terpilih"):
                     try:
+                        # Use updated delete_batch that safely removes all karyawan in the selected batch
                         delete_batch(batch_to_delete)
                         st.success("✅ Batch berhasil dihapus.")
                         st.rerun()
@@ -305,4 +305,5 @@ def manager_interface(current_employee_uid=None):
 
         except sqlalchemy.exc.ProgrammingError:
             st.warning("⚠️ Tabel riwayat upload belum dibuat. Silakan upload master karyawan terlebih dahulu.")
+
 

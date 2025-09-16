@@ -248,15 +248,24 @@ def get_upload_history() -> pd.DataFrame:
     return pd.read_sql(query, get_engine())
 
 def delete_batch(batch_id: str) -> None:
+    """Delete all karyawan records in a specific upload batch."""
     with get_engine().begin() as conn:
-        conn.execute(text("DELETE FROM karyawan WHERE upload_batch_id = :bid"), {"bid": batch_id})
+        conn.execute(
+            text("DELETE FROM karyawan WHERE upload_batch_id = :bid"),
+            {"bid": batch_id}
+        )
 
 # --- Master Delete Helpers ---
 def delete_employee_by_uid(uid: str):
+    """Delete a single karyawan by UID."""
     with get_engine().begin() as conn:
-        conn.execute(text("DELETE FROM karyawan WHERE uid = :uid"), {"uid": uid})
+        conn.execute(
+            text("DELETE FROM karyawan WHERE uid = :uid"),
+            {"uid": uid}
+        )
 
 def delete_all_employees():
+    """Delete all karyawan (use with caution)."""
     with get_engine().begin() as conn:
         conn.execute(text("DELETE FROM karyawan"))
 
